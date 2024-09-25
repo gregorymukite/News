@@ -1,0 +1,99 @@
+from django.shortcuts import render
+import requests 
+from .models import News
+from bs4 import BeautifulSoup
+# Create your views here.
+
+import requests
+
+def scrape_article_content(article_url):
+    try:
+        # Make a GET request to fetch the HTML content of the article page
+        response = requests.get(article_url)
+        
+        # Check if the request was successful
+        if response.status_code == 200:
+            # Parse the HTML using BeautifulSoup
+            soup = BeautifulSoup(response.content, 'html.parser')
+            
+            # Adjust the 'div' and 'class_' to match the website you're scraping
+            # This needs to be adapted based on the specific structure of the website
+            article_content = soup.find('div', class_='article-content')  # Example only, you need to check the actual site structure
+            
+            if article_content:
+                # Extract all paragraph tags from the article content
+                paragraphs = article_content.find_all('p')
+                
+                # Join all paragraph text into a single string
+                full_text = '\n'.join([p.get_text() for p in paragraphs])
+                
+                return full_text
+            else:
+                return "Content not found on the page"
+        else:
+            return "Failed to retrieve the article"
+    except Exception as e:
+        return f"An error occurred: {e}"
+
+# View to fetch news from API and save it to the database
+def mynews(request):
+    api_url = 'https://newsapi.org/v2/everything?q=kenya&from=2024-08-23&sortBy=publishedAt&apiKey=8abf0c99c012459aa8a1f1bf1b7e091f'
+    response = requests.get(api_url)
+    
+    if response.status_code == 200:
+        data = response.json()
+
+        for article in data.get('articles', []):
+            # Extract article data
+            title = article.get('title', 'No Title')
+            description = article.get('description', 'No Description')
+            pub_date = article.get('publishedAt', None)
+            source_name = article.get('source', {}).get('name', 'Unknown Source')
+            author = article.get('author', 'Unknown Author')
+            short_content = article.get('content', 'Unknown content')
+            article_url = article.get('url', '')
+            image_url = article.get('urlToImage', '')
+            
+            # Scrape full content from the article's URL
+            full_content = scrape_article_content(article_url)
+            if not full_content:
+                full_content = "Content not available"
+            
+            # Only create a new record if the article does not already exist
+            if title and article_url:
+                if not News.objects.filter(title=title, url=article_url).exists():
+                    news = News.objects.create(
+                        title=title,
+                        description=description,
+                        pub_date=pub_date,
+                        source=source_name,
+                        author=author,
+                        url=article_url,
+                        image=image_url,
+                        content=full_content,  # Store the full content scraped from the article URL
+                    )
+                news.save()
+
+            else:
+                print(f"Skipping article with missing title or URL: {title}, {article_url}")
+    # Retrieve and display the news sorted by publication date (most recent first)
+    news = News.objects.all().order_by('-pub_date')
+    
+    context = {
+        'news': news,
+    }
+    
+    return render(request, 'mynews/index.html', context)
+def detail_news(request, id):
+    news_detail = News.objects.get(id=id)
+    context = {
+        'news_detail': news_detail,
+    }
+    return render(request, 'mynews/news_details.html', context)
+
+def detail_news(request, id):
+    news_detail = News.objects.get(id=id)
+    context = {
+        'news_detail': news_detail,
+    }
+    return render(request, 'mynews/news_details.html', context)

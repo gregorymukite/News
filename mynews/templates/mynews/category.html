@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+
+<!-- ========================= SECTION  ========================= -->
+<section class="section-name padding-y-sm">
+	<div class="container">
+
+		<header class="section-heading">
+			<h3 class="section-title text-uppercase">{{category}}</h3>
+		</header><!-- sect-heading -->
+
+
+		<div class="row">
+			{% for articles in news %}
+			<div class="col-md-3">
+				<div class="card card-product-grid">
+					<a href="" class="img-wrap"> <img src="{{articles.urlToImage}}"> </a>
+					<figcaption class="info-wrap">
+						<a class="text-secondary" href="#">{{articles.title}}</a>
+						<a class="text-secondary font-weight-bold" href="{{articles.url}}">{{articles.description | safe}}</a>
+						
+
+
+					</figcaption>
+				</div>
+			</div><!-- col.// -->
+			{% endfor %}
+		</div> <!-- row.// -->
+
+	</div><!-- container // -->
+</section>
+<!-- ========================= SECTION  END// ========================= -->
+
+
+{% endblock content %}

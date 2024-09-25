@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+ 
+<section class="section-content padding-y bg">
+    <div class="container">
+
+        <div class="d-flex justify-content-center">
+            <!-- ============================ COMPONENT 1 ================================= -->
+            <div class="col-md-8">
+                <div class="card ">
+                    <div class="row no-gutters">
+                        <hr>
+                        <main class="">
+                            <h2 class="title text-center">{{news.title}}</h2>
+                            {% if news.image %}
+                            <article>
+                                <div class="mb-0">
+                                    <img style="width: 40%; margin-left: 30%; margin-right: 30%;" src="{{news.image}}">
+                                </div> <!-- img-big-wrap.// -->
+                            </article> <!-- gallery-wrap .end// -->
+                            {%endif%}
+                            <article class="content-body mt-0">
+                                <h6> {{news.description|safe}} </h6>
+                                
+                                <p> {{news.content}} </p>
+                                <p>{{news.author}} <br>{{news_detail.pub_date}} </p>
+
+
+
+                                <hr>
+
+                            </article> <!-- product-info-aside .// -->
+                        </main> <!-- col.// -->
+                    </div> <!-- row.// -->
+                </div> <!-- card.// -->
+            </div>
+        </div>
+        <!-- ============================ COMPONENT 1 END .// ================================= -->
+
+        <br>
+
+    </div> <!-- container .//  -->
+</section>
+
+
+{% endblock content %}
