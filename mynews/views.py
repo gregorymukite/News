@@ -1,19 +1,34 @@
-from django.shortcuts import render
+from django.shortcuts import render,get_object_or_404
 import requests
 from bs4 import BeautifulSoup
 from .models import News
+from django.core.paginator import Paginator
 # Create your views here.
 
 import re
 from bs4 import BeautifulSoup
 import requests
 
+
+from django.shortcuts import render
+import requests
+from bs4 import BeautifulSoup
+from .models import News, Category as NewsCategory
+# Create your views here.
+
+
+#api handling
+#apiKey = '8abf0c99c012459aa8a1f1bf1b7e091f'
+apiKey = '49b580ec3f5740b19d1c1f4948c39e62' #second
+def news_url(keyword, apiKey):
+    return f'https://newsapi.org/v2/everything?q=kenyan {keyword}&from=2024-09-16&sortBy=publishedAt&apiKey={apiKey}'
+
 def clean_content(text):
     # List of common unwanted patterns
     unwanted_phrases = [
         r'CHECK OUT:', r'ENROLL NOW', r'SUBSCRIBE', r'PAY ATTENTION:',
         r'Sponsored', r'Proofreading by', r'Source:', r'Read also',
-        r'WhatsApp Channels', r'Contact us:', r'Click here'
+        r'WhatsApp Channels', r'Contact us:', r'Click here', r'TUKO.co.ke', r'chars', r'Survey'
     ]
 
     # Join unwanted phrases into a regex pattern and remove them
@@ -69,105 +84,92 @@ def get_article_content(url):
     except Exception as e:
         return f"An unexpected error occurred: {e}"
 
-
 def mynews(request):
-    api_url = 'https://newsapi.org/v2/everything?q=kenya&from=2024-08-25&sortBy=publishedAt&apiKey=8abf0c99c012459aa8a1f1bf1b7e091f'
-    response = requests.get(api_url)
-    if response.status_code == 200:
-        data = response.json()
+    categories = NewsCategory.objects.all()  # Get all categories
 
-        for article in data.get('articles', []):
-            title = article.get('title', 'No Title')
-            description = article.get('description', 'No Description')
-            pub_date = article.get('publishedAt', None)
-            source_name = article.get('source', {}).get('name', 'Unknown Source')
-            author = article.get('author', 'Unknown Author')
-            url = article.get('url', '')
-            image_url = article.get('urlToImage', '')
-            content = article.get('content', '')
+    for category in categories:
+        keyword = category.name  # Use the category's name as the keyword
+        api_url = news_url(keyword, apiKey)
+        
+        # Add error handling for API requests
+        try:
+            response = requests.get(api_url)
+            response.raise_for_status()
+        except requests.exceptions.RequestException as e:
+            print(f"Error fetching data from the API: {e}")
+            continue  # Skip this category and move to the next one
 
-            # Try to get the full article content by scraping the URL
-            full_content = get_article_content(url)
+        if response.status_code == 200:
+            data = response.json()
 
-            # If scraping fails or no content found, fallback to API-provided content
-            if not full_content or "Content not found" in full_content:
-                full_content = content if content else "Content not available"
+            news_count = 0  # Initialize a counter for the number of news items added
 
-            if not News.objects.filter(title=title, url=url).exists():
-                news = News.objects.create(
-                    title=title,
-                    description=description,
-                    pub_date=pub_date,
-                    source=source_name,
-                    author=author,
-                    url=url,
-                    image=image_url,
-                    content=full_content,
-                )
-                print(f'News added: {title}')
-                news.save()
-    
+            for article in data.get('articles', []):
+                if news_count >= 3:  # Stop after adding 3 news items for this category
+                    break
+
+                title = article.get('title', 'No Title')
+                description = article.get('description', 'No Description')
+                pub_date = article.get('publishedAt', None)
+                source_name = article.get('source', {}).get('name', 'Unknown Source')
+                author = article.get('author', 'Unknown Author')
+                url = article.get('url', '')
+                image_url = article.get('urlToImage', '')
+                content = article.get('content', '')
+
+                # Try to get the full article content by scraping the URL
+                full_content = get_article_content(url)
+
+                # If scraping fails or no content found, fallback to API-provided content
+                if not full_content or "Content not found" in full_content:
+                    full_content = content if content else "Content not available"
+
+                # Only add the news if it doesn't already exist
+                if not News.objects.filter(title=title, url=url).exists():
+                    if title != '[Removed]':  # Skip articles with the title '[Removed]'
+                        news = News.objects.create(
+                            category=category,  # Assign the current category
+                            title=title,
+                            description=description,
+                            pub_date=pub_date,
+                            source=source_name,
+                            author=author,
+                            url=url,
+                            image=image_url,
+                            content=full_content,
+                        )
+                        news_count += 1  # Increment the counter when a news item is added
+                        print(f'News added: {title}')
+                        news.save()
+
+    # Retrieve all news and order by published date
     news = News.objects.all().order_by('-pub_date')
+    paginator = Paginator(news, 12)  # Show 12 news items per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)  # Get the correct page
+
     context = {
-        'news': news,
+        'page_obj': page_obj,  # Pass the page object to the template
     }
     return render(request, 'mynews/index.html', context)
 
-
 def Category(request, category):
-    api_url = f'https://newsapi.org/v2/everything?q={category}&from=2024-08-25&sortBy=publishedAt&apiKey=8abf0c99c012459aa8a1f1bf1b7e091f'
+    print(f"Requested category: {category}")  
+
+    category_instance = get_object_or_404(NewsCategory, name__iexact=category)
+
+    articles = News.objects.filter(category=category_instance)
+
+    # Prepare context for the template
+    context = {
+        'category': category_instance,
+        'news': articles,
+    }
+
     
-    response = requests.get(api_url)
+    return render(request, 'mynews/category.html', context)
+
     
-    if response.status_code == 200:
-        data = response.json()
-        articles = []
-        
-        for article in data.get('articles', []):
-            title = article.get('title', 'No Title')
-            description = article.get('description', 'No Description')
-            pub_date = article.get('publishedAt', None)
-            source_name = article.get('source', {}).get('name', 'Unknown Source')
-            author = article.get('author', 'Unknown Author')
-            url = article.get('url', '')
-            image_url = article.get('urlToImage', '')
-            content = article.get('content', '')
-
-            # Try to get the full article content by scraping the URL
-            full_content = get_article_content(url)
-
-            # If scraping fails or no content is found, use API content as a fallback
-            if not full_content or "Content not found" in full_content:
-                full_content = content if content else "Content not available"
-
-            # Append article data to the list
-            articles.append({
-                'title': title,
-                'description': description,
-                'pub_date': pub_date,
-                'source_name': source_name,
-                'author': author,
-                'url': url,
-                'image_url': image_url,
-                'content': full_content
-            })
-        
-        # Pass the articles to the template for rendering
-        context = {
-            'category': category.capitalize(),
-            'articles': articles,
-        }
-        
-        return render(request, 'mynews/category.html', context)
-    
-    else:
-        # Handle the case when the API request fails
-        context = {
-            'error_message': f"Failed to retrieve articles for {category}. Status code: {response.status_code}"
-        }
-        return render(request, 'mynews/category.html', context)
-
-
 
 def Details(request, id):
     news = News.objects.get(id=id)
@@ -175,3 +177,5 @@ def Details(request, id):
         'news': news,
     }
     return render(request, 'mynews/details.html', context)
+
+

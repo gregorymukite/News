@@ -5,6 +5,6 @@ urlpatterns = [
     path('', mynews, name='mynews' ),
     path('home/', mynews, name='home' ),
     path('trending/', mynews, name='mynews' ),
-    path('category/<category>/', Category, name='category' ),
+    path('category/<str:category>/', Category, name='category' ),
     path('details/<int:id>/', Details, name='details' ),
 ]

@@ -2,52 +2,55 @@
 {% load static %}
 {% block content %}
 
-<!-- ========================= SECTION MAIN ========================= -->
 <section class="section-intro padding-y-sm">
-	<div class="container">
-
-		<div class="intro-banner-wrap">
-			<img src="images/banners/1.jpg" class="img-fluid rounded">
-		</div>
-
-	</div> <!-- container //  -->
+    <div class="container">
+        <div class="intro-banner-wrap">
+            <img src="images/banners/1.jpg" class="img-fluid rounded">
+        </div>
+    </div>
 </section>
-<!-- ========================= SECTION MAIN END// ========================= -->
 
-<!-- ========================= SECTION  ========================= -->
 <section class="section-name padding-y-sm">
-	<div class="container">
+    <div class="container">
+        <div class="row">
+            {% for article in page_obj.object_list %}
+            <div class="col-md-3 news-container mb-5">
+                <div class="card card-product-grid">
+                    {% if article.image %}
+                    <a href="{% url 'details' article.id %}" class="img-wrap"> 
+                        <img src="{{ article.image }}">
+                    </a>
+                    {% else %}
+                    <a class="text-secondary font-weight-bold" href="{% url 'details' article.id %}">{{ article.description }}</a>
+                    {% endif %}
+                    <figcaption class="info-wrap">
+                        <a class="text-secondary font-weight-bold" href="{% url 'details' article.id %}">{{ article.title }}</a>
+                    </figcaption>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
 
-		<header class="section-heading">
-			<h3 class="section-title">Trending</h3>
-		</header><!-- sect-heading -->
+        <!-- Pagination controls -->
+        <div class="pagination">
+            <span class="step-links">
+                {% if page_obj.has_previous %}
+                    <a href="?page=1">&laquo; first</a>
+                    <a href="?page={{ page_obj.previous_page_number }}">previous</a>
+                {% endif %}
 
+                <span class="current">
+                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
+                </span>
 
-		<div class="row">
-			{% for articles in news %}
-			
-			
-			<div class="col-md-3">
-				<div class="card card-product-grid">
-					{% if articles.image %}
-					<a href="{%url 'details' articles.id%}" class="img-wrap"> <img src="{{articles.image}}"> </a>
-					{%else%}
-					<a class="text-secondary font-weight-bold" href="{%url 'details' articles.id%}">{{articles.description}}</a>
-					{% endif %}
-					<figcaption class="info-wrap">
-						<a class="text-secondary font-weight-bold" href="{%url 'details' articles.id%}">{{articles.title}}</a>
-						
+                {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}">next</a>
+                    <a href="?page={{ page_obj.paginator.num_pages }}">last &raquo;</a>
+                {% endif %}
+            </span>
+        </div>
 
-					</figcaption>
-				</div>
-			</div><!-- col.// -->
-			
-			{% endfor %}
-		</div> <!-- row.// -->
-
-	</div><!-- container // -->
+    </div>
 </section>
-<!-- ========================= SECTION  END// ========================= -->
-
 
 {% endblock content %}

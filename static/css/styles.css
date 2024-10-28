@@ -1,0 +1,14 @@
+.news-container {
+    max-height: 300px;
+    overflow-x: hidden;
+    overflow-y: scroll;
+    /* Hide scrollbar for modern browsers */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* Internet Explorer 10+ */
+    
+}
+
+/* Hide scrollbar for WebKit-based browsers (Chrome, Safari, Edge) */
+.news-container::-webkit-scrollbar {
+    display: none;
+}
